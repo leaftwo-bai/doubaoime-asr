@@ -174,3 +174,14 @@ async def transcribe_realtime(
 ```python
 config = ASRConfig(credential_path="~/.config/doubaoime-asr/credentials.json")
 ```
+
+### ASR_APP_KEY
+
+ASR 会话需要官方豆包输入法内置的 app key，通过环境变量 `ASR_APP_KEY` 注入（**不写入源码**）：
+
+```bash
+# 在项目目录建未被跟踪的 .envrc.local，direnv 会自动加载
+export ASR_APP_KEY="你的key"
+```
+
+未设置该变量时，`ensure_credentials()` 会抛出明确的错误提示。

@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Optional, Union
 from pydantic import BaseModel
 
-from .constants import WEBSOCKET_URL, USER_AGENT, AID
-from .device import DeviceCredentials, register_device, get_asr_token
+from .constants import ASR_APP_KEY, WEBSOCKET_URL, USER_AGENT, AID
+from .device import DeviceCredentials, register_device
 
 
 class _AudioInfo(BaseModel):
@@ -148,8 +148,6 @@ class ASRConfig:
             # 使用文件中的值作为默认
             if self.device_id is None:
                 self.device_id = file_creds.device_id
-            if self.token is None:
-                self.token = file_creds.token
         
         # 如果 device_id 仍为 None, 则注册设备
         need_save = False
@@ -158,15 +156,20 @@ class ASRConfig:
             self.device_id = self._credentials.device_id
             need_save = True
         
-        # 如果 token 仍为 None, 则获取 token
+        # settings 返回的 app_key 已不能路由 ASR；官方 IME 使用内置固定 key。
         if self.token is None:
-            cdid = self._credentials.cdid if self._credentials else None
-            self.token = get_asr_token(self.device_id, cdid)
+            if not ASR_APP_KEY:
+                raise RuntimeError(
+                    "未设置 ASR_APP_KEY 环境变量（豆包输入法内置 key），"
+                    "请通过 .envrc.local / direnv 或 export 提供"
+                )
+            self.token = ASR_APP_KEY
         
         # 如果指定了 credential_path 且有新注册的凭据，则保存至文件
-        if self.credential_path and need_save and self._credentials:
-            self._credentials.token = self.token
-            self._save_credentials_to_file(self._credentials)
+        if self.credential_path and self._credentials:
+            if need_save or self._credentials.token != self.token:
+                self._credentials.token = self.token
+                self._save_credentials_to_file(self._credentials)
         
         # 覆盖用户传入的参数
         if user_device_id is not None:
